@@ -107,4 +107,23 @@ Teamlimits gelten einschließlich Inhaber; sie werden bei Zugangserteilung gepr�
 
 `Plans::forOrder()` berechnet die tarifabhängige Bestellprovision, `Plans::monthlyFee()` die Monatsgebühr einschließlich separat ausgewiesener Umsatzsteuer. Die vorbereiteten Stripe-/PayPal-Requests lassen bei 0 % die Plattformgebühr weg. Künftige Zahlungsaufrufe müssen den Tarifservice verwenden; der niedrigere Commission-Rechner bleibt ein reiner Rechenbaustein.
 
-**Noch keine automatische Abo-Abrechnung:** Die Vorschau nimmt einen vollen Monat an. Rechnungsstellung, Einzug der Monatsgebühren, Vertragslaufzeit, Kündigung, Wechsel zum Periodenbeginn, anteilige Monate und historische Periodenabrechnung sind noch nicht implementiert. `billing:set-plan` ändert die aktuelle Konfiguration unmittelbar; es ist kein rückwirkender Abrechnungsauftrag. Historische Abrechnungen dürfen später nicht aus dem jeweils aktuellen Tarif neu berechnet werden. Bestellcheckout bleibt gesperrt.
+**Noch keine automatische Rechnung oder Abbuchung:** Monatsentwürfe und datierte Abrechnungsbedingungen sind gespeichert (siehe unten). Rechnungsfreigabe, Einzug, Kündigung und anteilige Monate folgen. Bestellcheckout bleibt gesperrt.
+
+## Gespeicherte Monatsabrechnungsentwürfe
+
+Die Verwaltung legt nach Vereinbarung eines vollen Abrechnungsmonats ausdrücklich dessen Beginn fest. Bestehende Restaurants werden durch die Migration nicht automatisch abgerechnet. Beispiel (Monat anpassen):
+
+```bash
+php artisan billing:set-plan mein-restaurant starter --billing-from=2026-11
+php artisan billing:prepare mein-restaurant 2026-11
+```
+
+`billing:set-plan` ohne `--billing-from` bleibt eine unmittelbare Funktionszuordnung. Mit der Option werden zusätzlich datierte Bedingungen gespeichert: Tarifname/-schlüssel, Nettomonatsbetrag, Umsatzsteuersatz und Provisionssatz. Pro Restaurant und Startmonat existiert höchstens ein Bedingungssatz. Identische Wiederholung ist zulässig, widersprüchliche Bedingungen werden abgewiesen. Neue Bedingungen können nur für den aktuellen oder einen künftigen Monat angelegt werden; keine Rückdatierung. Ein Tarifwechsel für die Abrechnung benötigt einen neuen Startmonat. Bereits belegte Monate werden nicht überschrieben.
+
+`billing:prepare` erzeugt genau einen Entwurf pro Restaurant und Monat oder liefert denselben gespeicherten Entwurf zurück. Grundlage ist der letzte vereinbarte Bedingungssatz mit Beginn spätestens in diesem Monat; niemals die heutige Preiskonfiguration. Der Entwurf speichert Zeitraum, Tarif, Steuer, Beträge, Restaurantname und Adresse bei Erstellung. Er kann für aktuelle/vergangene Monate mit vorhandenen Bedingungen erstellt werden. Zukünftige Entwürfe sowie Entwürfe ohne Vereinbarung werden abgewiesen. Flex erzeugt keine fiktive Nullabrechnung: Provisionsabrechnung benötigt später echte Bestelldaten.
+
+Monatsgrenzen richten sich nach Europe/Berlin. Es gilt der volle Kalendermonat, ohne taggenaue Anteile. Der aktuelle Monat kann bereits als Entwurf vorbereitet werden. Nachträgliche Änderungen von Restaurantdaten oder Preiskonfiguration ändern gespeicherte Entwürfe nicht. Es gibt noch keine automatische monatliche Erzeugung; der Befehl wird ausdrücklich ausgeführt.
+
+Sobald datierte Bedingungen vorhanden sind, verwendet `Plans::forOrder()` für neue Bestellungen deren aktuell gültigen Provisions- und Steuersatz. Vor dem ersten künftigen Abrechnungsmonat gilt Flex. Ohne datierte Bedingungen bleibt die bisherige Tarifkonfiguration die Berechnungsbasis. So führt eine separate Funktionszuordnung nicht zu einer zusätzlichen Provision während eines vereinbarten Pauschalmonats. Der spätere Bestellkern muss den bei Bestellung berechneten Tarif und Gebührenbetrag ebenfalls speichern; Erstattungen dürfen nicht aus späteren Tarifen neu berechnet werden.
+
+Inhaber sehen im Portal die letzten 12 vereinbarten Tarifstarts und die letzten 24 Monatsentwürfe. Jeder Entwurf lässt sich in einer eigenen, druckbaren HTML-Ansicht öffnen. Fremde Restaurants, Manager und Mitarbeiter haben darauf keinen Zugriff. Die Dokumente sind ausdrücklich **Entwürfe, keine Rechnungen oder Zahlungsaufforderungen**, haben keine Rechnungsnummer und lösen weder Versand noch Zahlung aus. Vollständige rechtliche Rechnungssteller-/Empfängerdaten, finale Rechnungsfreigabe, Korrekturbelege und automatischer Abo-Einzug sind noch nicht implementiert.

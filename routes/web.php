@@ -40,3 +40,5 @@ Route::prefix('/api/v1/merchant')->middleware(['auth', 'throttle:60,1'])->group(
     Route::get('/restaurants/{slug}/menu-export', [MerchantRestaurantController::class, 'export']);
     Route::get('/restaurants/{slug}/activities', [MerchantRestaurantController::class, 'activities']);
 });
+
+Route::get('/portal/restaurants/{slug}/billing-drafts/{draft}', [MerchantBillingController::class, 'draft'])->middleware(['auth', 'throttle:60,1'])->whereUuid('draft');
