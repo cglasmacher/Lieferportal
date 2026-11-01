@@ -61,7 +61,7 @@ function App() {
     }
     return <>
         <div className="preview-banner">Entwicklungsvorschau · Keine echten Bestellungen oder Zahlungen</div>
-        <header><a className="brand" href="/" aria-label="Lieferportal Startseite"><span className="brand-icon">↗</span> lieferportal<span className="brand-dot">.</span></a><span className="header-note">Gutes Essen. Faire Wege.</span><span className="location">⌖ Hilden</span></header>
+        <header><a className="brand" href="/" aria-label="Lieferportal Startseite"><span className="brand-icon">↗</span> lieferportal<span className="brand-dot">.</span></a><span className="header-note">Gutes Essen. Faire Wege.</span><a className="header-note" href="/portal">Restaurant-Login</a><span className="location">⌖ Hilden</span></header>
         <main>
             {loading ? <p role="status" className="loading">Restaurants werden geladen …</p> : restaurant ? <>
                 <a className="back" href="/">← Alle Restaurants</a>
@@ -73,7 +73,7 @@ function App() {
                 <div className="order-layout">
                     <section className="menu" aria-label="Speisekarte"><div className="section-title"><h2>Die Speisekarte</h2><span>Frisch für dich</span></div>
                         {[...new Set(restaurant.menu_items?.map(item=>item.category))].map(category=><section key={category}><h3>{category}</h3>{restaurant.menu_items?.filter(item=>item.category===category).map(item=><article className="dish" key={item.id}>
-                            <div><h4>{item.name}</h4><p>{item.description}</p><small>{item.allergens.length ? `Allergene: ${item.allergens.join(', ')}` : 'Demoangabe: keine deklarationspflichtigen Allergene'}</small><strong>{euro(item.price_cents)}</strong></div>
+                            <div><h4>{item.name}</h4><p>{item.description}</p><small>{item.allergens.length ? `Allergene: ${item.allergens.join(', ')}` : 'Keine Allergene angegeben – bitte beim Restaurant nachfragen'}</small><strong>{euro(item.price_cents)}</strong></div>
                             <button className="add" disabled={!restaurant.is_accepting_orders || (cart[item.id] ?? 0)>=20} onClick={()=>adjust(item.id,1)} aria-label={`${item.name} hinzufügen`}>+</button>
                         </article>)}</section>)}
                     </section>
