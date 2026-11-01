@@ -1,5 +1,62 @@
 # Lieferportal
 
-Regionaler Bestellmarktplatz mit 5 % Vermittlungsprovision. Restaurants übernehmen Zahlungsempfang und Lieferung.
+Regionaler Bestellmarktplatz. Restaurants sind Verkäufer, Zahlungsempfänger und Lieferverantwortliche. Geplante Vermittlungsprovision: 5 % auf den Bruttowarenwert, ohne Lieferung, Trinkgeld oder Pfand, zuzüglich Umsatzsteuer auf die Provision.
 
-Laravel / React / TypeScript. Stripe Connect und PayPal Multiparty sind als Zahlungsanbieter vorgesehen.
+## Erster Entwicklungsstand
+
+- Laravel 13, React 19 und TypeScript; responsive Restaurantliste, Flyer-Einstieg `/r/{slug}`, Speisekarte und Warenkorb.
+- Versionierte Katalog- und Angebotsendpunkte `/api/v1/restaurants`, `/api/v1/restaurants/{slug}` und `POST /api/v1/restaurants/{slug}/quote`.
+- Preise werden serverseitig ermittelt; Prüfung von Liefergebiet, Mindestbestellwert, Verfügbarkeit und Restaurantzugehörigkeit.
+- Getrennte, getestete Request-Spezifikationen für Stripe Connect Direct Charges und PayPal Multiparty mit Restaurant als Zahlungsempfänger.
+- Checkout ist absichtlich vollständig gesperrt. Die Request-Spezifikationen senden keine API-Anfragen. Es werden keine Bestellungen gespeichert, keine Händlerkonten angebunden und keine Zahlungen gestartet.
+
+## Lokal starten
+
+Voraussetzungen: PHP 8.4.27+, Composer 2, Node 22.12+ und npm. PHP-Erweiterungen: PDO SQLite für Entwicklung/Tests, PDO MySQL für Produktion, mbstring, XML, curl, zip. Die Composer-Plattform ist auf PHP 8.4.27 festgelegt.
+
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+# Für lokale Entwicklung: DB_CONNECTION=sqlite in .env setzen.
+# Die Datei database/database.sqlite einmal leer anlegen.
+php artisan migrate
+php artisan db:seed --class=DemoCatalogSeeder
+npm ci
+npm run build
+php artisan serve
+```
+
+Dann `http://127.0.0.1:8000/r/demo-kueche` öffnen. Demo-Liefergebiete: 40721, 40723, 40724. Beispieldaten sind fiktiv; der Demo-Seeder verweigert Produktion und ist wiederholbar. Der normale Seeder legt keine Betriebe oder Testbenutzer an.
+
+Für Frontend-Entwicklung `npm run dev` zusätzlich zu `php artisan serve` starten.
+
+## Tests
+
+```bash
+php artisan test
+npm run build
+vendor/bin/pint --test
+```
+
+Feature-Tests verwenden SQLite im Speicher. CI prüft zusätzlich Migrationen auf MySQL. Geldbeträge werden in Integer-Cents gespeichert/verarbeitet. Provision und deren Umsatzsteuer werden je Bestellung kaufmännisch gerundet. Bei 30,00 EUR Warenwert: 1,50 EUR Nettoprovision + 0,29 EUR Umsatzsteuer = 1,79 EUR Bruttogebühr.
+
+## Payment: nächste Umsetzung
+
+Stripe: eigenes verbundenes Konto je Restaurant, Direct Charges mit Händlerkontext; Händlerprüfung, Fähigkeiten, Gebühren- und Verlusthaftung vor Aktivierung bestätigen. Niemals ohne Händlerkonto auf das Plattformkonto zurückfallen.
+
+PayPal: Multiparty-/Plattformfreigabe und Verkäufer-Onboarding vor Zahlung. Restaurant-Merchant-ID als `payee`, Plattformgebühr separat. Normales PayPal Checkout für unser eigenes Geschäftskonto erfüllt dieses Modell nicht. Partnerfreigabe und Gebührenfunktionen mit PayPal klären; ein erfolgreicher Browser-Redirect ist kein Zahlungsnachweis.
+
+Vor Freischaltung fehlen insbesondere persistente Bestellungen/Zahlungsversuche, sichere Händlerverwaltung mit Mandantenrechten, Provider-Clients, signaturgeprüfte Webhooks, Idempotenz, Erstattungen und Abgleich. Je Anbieter ein Zahlungsversuch, keine automatische Umschaltung einer laufenden Zahlung. Geheimnisse nur serverseitig, niemals im Repository oder Vite-Variablen.
+
+## Geplante Ausbauschritte
+
+1. Restaurant-Login und Rollen, Speisekartenverwaltung, Bestell- und Zahlungsmodell mit Zustandsübergängen.
+2. Stripe- und PayPal-Onboarding, Sandbox-Zahlungen, bestätigte Provider-Ereignisse und Erstattungen.
+3. Restaurant-Bestelltafel, Annahmefristen, Benachrichtigungen und Provisionsabrechnung.
+4. Zwei eigene Capacitor-Apps für Kunden und Fahrer auf derselben API; Hintergrundortung zuerst auf echten Geräten erproben.
+5. Restaurantbezogene Flyer-Kampagnen und messbare Wiederbestellungen; datenschutzgerechte Zuordnung gesondert implementieren.
+
+## Plesk / Betrieb
+
+Document Root: `public/`. `.env` nicht veröffentlichen. Für Produktion MySQL konfigurieren, `APP_DEBUG=false`, HTTPS, sichere Cookies und `APP_KEY` setzen. Kein `migrate:fresh` in Produktion verwenden. Diese Vorschau ist noch nicht für öffentlichen Bestellbetrieb freigegeben. Öffnungszeiten, Adressprüfung, Varianten, Rabatte, Steuerlogik für Speisen, rechtliche Pflichtinformationen und Supportabläufe müssen vor einem öffentlichen Start vervollständigt werden.
