@@ -17,7 +17,7 @@ final class StripeDirectCharge
             'options' => ['stripe_account' => $accountId, 'idempotency_key' => $draft->id],
             'params' => [
                 'amount' => $draft->totalCents, 'currency' => 'eur',
-                'application_fee_amount' => $draft->platformFeeCents,
+                ...($draft->platformFeeCents > 0 ? ['application_fee_amount' => $draft->platformFeeCents] : []),
                 'payment_method_types' => ['card'],
                 'metadata' => ['order_id' => $draft->id],
             ],

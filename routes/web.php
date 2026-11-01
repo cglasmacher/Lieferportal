@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\MerchantBillingController;
 use App\Http\Controllers\MerchantRestaurantController;
 use App\Http\Controllers\MerchantSessionController;
 use App\Models\Restaurant;
@@ -30,4 +31,12 @@ Route::prefix('/api/v1/merchant')->middleware(['auth', 'throttle:60,1'])->group(
     Route::patch('/restaurants/{slug}', [MerchantRestaurantController::class, 'update']);
     Route::post('/restaurants/{slug}/menu-items', [MerchantRestaurantController::class, 'storeMenuItem']);
     Route::put('/restaurants/{slug}/menu-items/{item}', [MerchantRestaurantController::class, 'updateMenuItem'])->whereNumber('item');
+});
+
+Route::prefix('/api/v1/merchant')->middleware(['auth', 'throttle:60,1'])->group(function () {
+    Route::get('/restaurants/{slug}/billing', [MerchantBillingController::class, 'show']);
+    Route::post('/restaurants/{slug}/billing/request', [MerchantBillingController::class, 'requestChange']);
+    Route::delete('/restaurants/{slug}/billing/request', [MerchantBillingController::class, 'cancel']);
+    Route::get('/restaurants/{slug}/menu-export', [MerchantRestaurantController::class, 'export']);
+    Route::get('/restaurants/{slug}/activities', [MerchantRestaurantController::class, 'activities']);
 });

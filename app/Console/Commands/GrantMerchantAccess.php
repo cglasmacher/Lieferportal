@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Domain\Billing\Plans;
 use App\Models\Restaurant;
 use App\Models\User;
 use Illuminate\Console\Command;
@@ -51,10 +52,23 @@ class GrantMerchantAccess extends Command
                 return self::FAILURE;
             }
         }
-        DB::transaction(function () use ($user, $email, $password, $restaurant, $role) {
+        $success = DB::transaction(function () use ($user, $email, $password, $restaurant, $role) {
+            $locked = Restaurant::whereKey($restaurant->id)->lockForUpdate()->firstOrFail();
+            $limit = app(Plans::class)->get($locked->billing_plan)['team_limit'];
+            $existing = $user && $user->restaurants()->where('restaurants.id', $restaurant->id)->exists();
+            if (! $existing && $limit !== null && DB::table('restaurant_user')->where('restaurant_id', $restaurant->id)->count() >= $limit) {
+                $this->error('Das Teamlimit dieses Tarifs ist erreicht.');
+
+                return false;
+            }
             $account = $user ?? User::create(['name' => trim((string) $this->option('name')), 'email' => $email, 'password' => $password]);
             $account->restaurants()->syncWithoutDetaching([$restaurant->id => ['role' => $role]]);
+
+            return true;
         });
+        if (! $success) {
+            return self::FAILURE;
+        }
         $this->info('Restaurantzugang eingerichtet. Anmeldung unter /portal/login.');
 
         return self::SUCCESS;

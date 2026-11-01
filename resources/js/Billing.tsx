@@ -1,0 +1,25 @@
+import React, {useEffect,useState} from 'react';
+import {merchantApi as api} from './merchantApi';
+import {euro} from './types';
+type Plan={key:string;name:string;monthly_net_cents:number;commission_basis_points:number;team_limit:number|null;menu_export:boolean;activity_log:boolean;planned_benefits:string[]};
+type Account={current_plan:Plan;plans:Plan[];monthly_fee:{net_cents:number;vat_cents:number;gross_cents:number};requested_plan:string|null;billing_live:boolean};
+export function Billing({slug}:{slug:string}) {
+    const [account,setAccount]=useState<Account|null>(null);const [error,setError]=useState('');const [notice,setNotice]=useState('');const [busy,setBusy]=useState(false);
+    const path=`/restaurants/${slug}/billing`;
+    useEffect(()=>{let active=true;api<Account>(path).then(x=>{if(active)setAccount(x);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[path]);
+    async function request(plan?:string) {setBusy(true);setError('');setNotice('');try {await api(path+'/request',plan?'POST':'DELETE',plan?{plan}:undefined);setAccount(await api<Account>(path));setNotice(plan?'Tarifanfrage gespeichert. Die Plattformverwaltung meldet sich zur Aktivierung.':'Tarifanfrage zurückgenommen.');}catch(e){setError(e instanceof Error?e.message:'Anfrage fehlgeschlagen.');}finally{setBusy(false);}}
+    return <section className="billing-section"><div className="section-title"><h2>Dein Tarif & Abrechnung</h2><span>Pro Restaurantstandort · monatlich</span></div><p>Wähle zwischen umsatzabhängiger Provision und fester Monatspauschale. Alle Preise netto zuzüglich Umsatzsteuer. Zahlungsgebühren des jeweiligen Anbieters kommen separat hinzu.</p>
+        {error&&<p role="alert" className="error">{error}</p>}{notice&&<p role="status" className="success">{notice}</p>}
+        {account&&<><div className="plan-grid">{account.plans.map(p=><article className={'plan-card '+(account.current_plan.key===p.key?'current':'')} key={p.key}><span className="eyebrow">{p.name}</span><h3>{p.monthly_net_cents?euro(p.monthly_net_cents):'5 %'}<small>{p.monthly_net_cents?' / Monat':' pro Bestellung'}</small></h3><p>{p.monthly_net_cents?'0 % Bestellprovision':'Keine monatliche Grundgebühr'}</p><ul><li>Marktplatz und Restaurantseite</li><li>Speisekarte & Lieferparameter</li><li>{p.team_limit===null?'Unbegrenzte':p.team_limit} Teamzugänge</li>{p.menu_export&&<li>Speisekartenexport als CSV</li>}{p.activity_log&&<li>Änderungsprotokoll (letzte 50 Einträge)</li>}</ul>
+        {p.planned_benefits.length>0&&<details><summary>Geplante Zusatzvorteile</summary><ul>{p.planned_benefits.map(x=><li key={x}>{x} <small>– geplant</small></li>)}</ul></details>}
+        <button className="secondary" disabled={busy||account.current_plan.key===p.key||account.requested_plan===p.key} onClick={()=>request(p.key)}>{account.current_plan.key===p.key?'Aktueller Tarif':account.requested_plan===p.key?'Angefragt':'Tarif anfragen'}</button></article>)}</div>
+        <div className="billing-summary"><b>Aktueller Tarif: {account.current_plan.name}</b><p>Monatspauschale: {euro(account.monthly_fee.net_cents)} netto + {euro(account.monthly_fee.vat_cents)} USt. = {euro(account.monthly_fee.gross_cents)} brutto.{account.current_plan.commission_basis_points>0?' Zusätzlich 5 % Provision auf den provisionspflichtigen Warenwert.':' Keine zusätzliche Bestellprovision.'}</p><small>Konfigurationsvorschau für einen vollen Monat, keine Rechnung. Es werden noch keine Abogebühren eingezogen. Tarifwechsel werden erst durch die Plattformverwaltung zugeordnet.</small>{account.requested_plan&&<p><button className="secondary" disabled={busy} onClick={()=>request()}>Tarifanfrage zurücknehmen</button></p>}</div></>}
+    </section>;
+}
+type Activity={id:number;action:string;metadata:Record<string,unknown>;created_at:string};
+const actions:Record<string,string>={'menu.created':'Gericht angelegt','menu.updated':'Gericht geändert','settings.updated':'Lieferparameter geändert','billing.changed':'Tarif zugeordnet','billing.requested':'Tarif angefragt','billing.request_cancelled':'Tarifanfrage zurückgenommen'};
+export function ActivityLog({slug}:{slug:string}) {
+    const [rows,setRows]=useState<Activity[]>([]);const [error,setError]=useState('');const [busy,setBusy]=useState(false);
+    async function load(){setBusy(true);setError('');try{setRows(await api<Activity[]>(`/restaurants/${slug}/activities`));}catch(e){setError(e instanceof Error?e.message:'Laden fehlgeschlagen.');}finally{setBusy(false);}}
+    return <section className="portal-box"><h2>Änderungsprotokoll</h2><button className="secondary" disabled={busy} onClick={load}>{busy?'Wird geladen …':'Letzte 50 Einträge laden'}</button>{error&&<p role="alert" className="error">{error}</p>}<ul className="activity-list">{rows.map(row=><li key={row.id}><b>{actions[row.action]??row.action}</b><span>{new Date(row.created_at).toLocaleString('de-DE')}{row.metadata.item_id?` · Artikel #${row.metadata.item_id}`:''}</span></li>)}</ul></section>;
+}
