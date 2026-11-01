@@ -2,8 +2,9 @@
 
 Regionaler Bestellmarktplatz. Restaurants sind Verkäufer, Zahlungsempfänger und Lieferverantwortliche. Geplante Vermittlungsprovision: 5 % auf den Bruttowarenwert, ohne Lieferung, Trinkgeld oder Pfand, zuzüglich Umsatzsteuer auf die Provision.
 
-## Erster Entwicklungsstand
+## Aktueller Entwicklungsstand
 
+- Restaurantportal unter `/portal`: Session-Login mit CSRF-Schutz und Anmeldelimit, rollenbasierte Restaurantzuordnung, Speisekartenverwaltung und Lieferparameter. Inhaber/Manager bearbeiten, Mitarbeiter lesen.
 - Laravel 13, React 19 und TypeScript; responsive Restaurantliste, Flyer-Einstieg `/r/{slug}`, Speisekarte und Warenkorb.
 - Versionierte Katalog- und Angebotsendpunkte `/api/v1/restaurants`, `/api/v1/restaurants/{slug}` und `POST /api/v1/restaurants/{slug}/quote`.
 - Preise werden serverseitig ermittelt; Prüfung von Liefergebiet, Mindestbestellwert, Verfügbarkeit und Restaurantzugehörigkeit.
@@ -47,11 +48,11 @@ Stripe: eigenes verbundenes Konto je Restaurant, Direct Charges mit Händlerkont
 
 PayPal: Multiparty-/Plattformfreigabe und Verkäufer-Onboarding vor Zahlung. Restaurant-Merchant-ID als `payee`, Plattformgebühr separat. Normales PayPal Checkout für unser eigenes Geschäftskonto erfüllt dieses Modell nicht. Partnerfreigabe und Gebührenfunktionen mit PayPal klären; ein erfolgreicher Browser-Redirect ist kein Zahlungsnachweis.
 
-Vor Freischaltung fehlen insbesondere persistente Bestellungen/Zahlungsversuche, sichere Händlerverwaltung mit Mandantenrechten, Provider-Clients, signaturgeprüfte Webhooks, Idempotenz, Erstattungen und Abgleich. Je Anbieter ein Zahlungsversuch, keine automatische Umschaltung einer laufenden Zahlung. Geheimnisse nur serverseitig, niemals im Repository oder Vite-Variablen.
+Vor Freischaltung fehlen insbesondere persistente Bestellungen/Zahlungsversuche, Zahlungsanbieter-Onboarding, Provider-Clients, signaturgeprüfte Webhooks, Idempotenz, Erstattungen und Abgleich. Je Anbieter ein Zahlungsversuch, keine automatische Umschaltung einer laufenden Zahlung. Geheimnisse nur serverseitig, niemals im Repository oder Vite-Variablen.
 
 ## Geplante Ausbauschritte
 
-1. Restaurant-Login und Rollen, Speisekartenverwaltung, Bestell- und Zahlungsmodell mit Zustandsübergängen.
+1. Bestell- und Zahlungsmodell mit Zustandsübergängen. Restaurant-Login, Rollen und Speisekartenverwaltung sind implementiert.
 2. Stripe- und PayPal-Onboarding, Sandbox-Zahlungen, bestätigte Provider-Ereignisse und Erstattungen.
 3. Restaurant-Bestelltafel, Annahmefristen, Benachrichtigungen und Provisionsabrechnung.
 4. Zwei eigene Capacitor-Apps für Kunden und Fahrer auf derselben API; Hintergrundortung zuerst auf echten Geräten erproben.
@@ -60,3 +61,24 @@ Vor Freischaltung fehlen insbesondere persistente Bestellungen/Zahlungsversuche,
 ## Plesk / Betrieb
 
 Document Root: `public/`. `.env` nicht veröffentlichen. Für Produktion MySQL konfigurieren, `APP_DEBUG=false`, HTTPS, sichere Cookies und `APP_KEY` setzen. Kein `migrate:fresh` in Produktion verwenden. Diese Vorschau ist noch nicht für öffentlichen Bestellbetrieb freigegeben. Öffnungszeiten, Adressprüfung, Varianten, Rabatte, Steuerlogik für Speisen, rechtliche Pflichtinformationen und Supportabläufe müssen vor einem öffentlichen Start vervollständigt werden.
+
+## Restaurantzugang einrichten
+
+Nach dem Update zuerst `php artisan migrate` und `npm ci && npm run build` ausführen.
+
+Für ein echtes Restaurant legt die Plattformverwaltung zunächst einen unveröffentlichten und pausierten Datensatz an:
+
+```bash
+php artisan restaurant:create mein-restaurant "Mein Restaurant"
+php artisan merchant:grant mein-restaurant betreiber@example.de --name="Max Muster"
+```
+
+Der zweite Befehl fragt bei neuen Benutzern ein Passwort zweimal verdeckt ab (mindestens 12 Zeichen). Es gibt keine Standardpasswörter und keine Passwörter als Kommandoargument. Für vorhandene Benutzer bleibt das Passwort unverändert. Die Rolle ist standardmäßig `owner`; alternativ `--role=manager` oder `--role=staff`. Die Befehle sind nur für vertrauenswürdige Serveradministratoren gedacht und senden keine E-Mails. Keine öffentliche Registrierung, kein Passwort-Reset und noch keine Benutzerverwaltung im Browser.
+
+Für die lokale Demo nach dem Demo-Seeder:
+
+```bash
+php artisan merchant:grant demo-kueche betreiber@example.de --name="Demo Betreiber"
+```
+
+Anmeldung anschließend unter `/portal/login`. Menüänderungen werden in der Kundenansicht sichtbar; pausierte Artikel verschwinden dort. Liefer-Postleitzahlen, Mindestbestellwert, Lieferkosten und geschätzte Zeit sind bearbeitbar. Veröffentlichungsfreigabe und Zahlungsanbieter-IDs können über diese Endpunkte nicht geändert werden. Restaurant-Stammdaten und Veröffentlichung bleiben bis zum vollständigen Onboarding Aufgabe der Plattformverwaltung. Das Aktivieren der Bestellannahme schaltet den weiterhin gesperrten Checkout nicht frei.

@@ -32,7 +32,7 @@ jobs:
       - run: php artisan test
       - run: vendor/bin/pint --test
       - name: Verify MySQL catalog and tenant boundaries
-        run: php artisan test tests/Feature/CatalogTest.php
+        run: php artisan test tests/Feature
         env:
           DB_CONNECTION: mysql
           DB_HOST: 127.0.0.1
