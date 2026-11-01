@@ -1,3 +1,5 @@
+import { merchantApi as api } from './merchantApi';
+import { Billing, ActivityLog } from './Billing';
 import React, { useEffect, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { euro, type MenuItem } from './types';
@@ -5,18 +7,7 @@ import { euro, type MenuItem } from './types';
 type Member = {slug:string;name:string;role:'owner'|'manager'|'staff'};
 type Session = {user:{name:string;email:string};restaurants:Member[]};
 type ManagedItem = MenuItem & {is_available:boolean;sort_order:number};
-type Details = Member & {can_edit:boolean;is_published:boolean;is_accepting_orders:boolean;estimated_minutes:number;minimum_order_cents:number;delivery_fee_cents:number;delivery_postcodes:string[];menu_items:ManagedItem[]};
-const csrf = () => document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
-async function api<T>(path:string, method='GET', body?:unknown):Promise<T> {
-    const response=await fetch('/api/v1/merchant'+path,{method,credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json','X-CSRF-TOKEN':csrf()},body:body===undefined?undefined:JSON.stringify(body)});
-    const json=await response.json();
-    if(response.status===401) { window.location.assign('/portal/login');throw new Error('Bitte erneut anmelden.'); }
-    if(!response.ok) {
-        const messages=Object.values(json.errors ?? {}).flat() as string[];
-        throw new Error(response.status===419?'Die Sitzung ist abgelaufen. Bitte lade die Seite neu.':messages[0] ?? json.message ?? 'Speichern fehlgeschlagen.');
-    }
-    return json.data as T;
-}
+type Details = Member & {billing_plan:string;can_edit:boolean;is_published:boolean;is_accepting_orders:boolean;estimated_minutes:number;minimum_order_cents:number;delivery_fee_cents:number;delivery_postcodes:string[];menu_items:ManagedItem[]};
 function cents(value:string):number {
     if(!/^\d{1,4}([.,]\d{1,2})?$/.test(value)) throw new Error('Bitte einen gültigen Eurobetrag mit höchstens zwei Nachkommastellen eingeben.');
     const [whole,fraction='']=value.replace(',','.').split('.');
@@ -74,10 +65,12 @@ function Portal() {
         {error&&<p className="error" role="alert">{error}</p>}{notice&&<p className="success" role="status">{notice}</p>}
         {loading?<p role="status">Portal wird geladen …</p>:session&&!session.restaurants.length?<p>Deinem Zugang ist noch kein Restaurant zugeordnet. Bitte wende dich an die Plattformverwaltung.</p>:<label className="restaurant-select">Restaurant<select value={slug} disabled={busy} onChange={e=>setSlug(e.target.value)}>{session?.restaurants.map(r=><option key={r.slug} value={r.slug}>{r.name}</option>)}</select></label>}
         {restaurant&&<><div className="portal-status"><b>{restaurant.name}</b><span>{restaurant.is_published?'Veröffentlicht':'Noch unveröffentlicht'}</span><span>{restaurant.can_edit?'Bearbeitungszugriff':'Lesezugriff'}</span>{restaurant.is_published&&<a href={`/r/${restaurant.slug}`}>Kundenansicht ↗</a>}</div>
-        <div className="portal-layout"><section><div className="section-title"><h2>Speisekarte</h2>{restaurant.can_edit&&<button className="secondary" disabled={busy} onClick={()=>setEditor('new')}>+ Neues Gericht</button>}</div>
+        {restaurant.role==='owner'&&<Billing key={restaurant.slug} slug={restaurant.slug}/>}
+        <div className="portal-layout"><section><div className="section-title"><h2>Speisekarte</h2>{restaurant.can_edit&&['growth','pro'].includes(restaurant.billing_plan)&&<a className="secondary" href={`/api/v1/merchant/restaurants/${slug}/menu-export`}>CSV exportieren</a>}{restaurant.can_edit&&<button className="secondary" disabled={busy} onClick={()=>setEditor('new')}>+ Neues Gericht</button>}</div>
             {!restaurant.menu_items.length&&<p>Noch keine Gerichte angelegt.</p>}
             {restaurant.menu_items.map(item=><article className="dish" key={item.id}><div><small>{item.category} · {item.is_available?'Verfügbar':'Pausiert'}</small><h4>{item.name}</h4><p>{item.description}</p><strong>{euro(item.price_cents)}</strong></div>{restaurant.can_edit&&<button className="secondary" disabled={busy} onClick={()=>setEditor(item)}>Bearbeiten</button>}</article>)}
             {editor&&<ItemEditor key={editor==='new'?'new':editor.id} item={editor==='new'?undefined:editor} busy={busy} onCancel={()=>setEditor(null)} onSave={async(body,id)=>{await save(`/restaurants/${slug}/menu-items${id?'/'+id:''}`,id?'PUT':'POST',body);setEditor(null);}}/>}
+        {restaurant.can_edit&&restaurant.billing_plan==='pro'&&<ActivityLog key={restaurant.slug} slug={restaurant.slug}/>}
         </section><Settings key={restaurant.slug} restaurant={restaurant} busy={busy} onSave={body=>save(`/restaurants/${slug}`,'PATCH',body)}/></div></>}
     </>;
 }

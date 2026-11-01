@@ -82,3 +82,29 @@ php artisan merchant:grant demo-kueche betreiber@example.de --name="Demo Betreib
 ```
 
 Anmeldung anschließend unter `/portal/login`. Menüänderungen werden in der Kundenansicht sichtbar; pausierte Artikel verschwinden dort. Liefer-Postleitzahlen, Mindestbestellwert, Lieferkosten und geschätzte Zeit sind bearbeitbar. Veröffentlichungsfreigabe und Zahlungsanbieter-IDs können über diese Endpunkte nicht geändert werden. Restaurant-Stammdaten und Veröffentlichung bleiben bis zum vollständigen Onboarding Aufgabe der Plattformverwaltung. Das Aktivieren der Bestellannahme schaltet den weiterhin gesperrten Checkout nicht frei.
+
+## Alternative Monatstarife (Konfigurationsstand)
+
+Neben Flex mit 5 % Provision gibt es monatliche Pauschalen je Restaurantstandort. Alle Preise netto zuzüglich Umsatzsteuer, Zahlungsanbietergebühren separat. Bei Pauschalen fällt **keine zusätzliche Bestellprovision** an. Preise und Leistungsstaffelung liegen zentral in `config/billing.php`.
+
+| Tarif | Monat netto | Bestellprovision | Teamzugänge | Speisekarten-CSV | Änderungsprotokoll |
+|---|---:|---:|---:|---|---|
+| Flex | 0 € | 5 % | unbegrenzt | nein | nein |
+| Starter | 49 € | 0 % | 2 | nein | nein |
+| Wachstum | 89 € | 0 % | 5 | ja | nein |
+| Pro | 129 € | 0 % | 15 | ja | letzte 50 Einträge |
+
+Alle Tarife enthalten die implementierte Restaurantseite, Speisekarte und Lieferparameter. Fahrer-App, Website-Widget, Flyer-Generator, Kampagnenauswertung und weitere Integrationen sind in den Tarifkarten ausdrücklich als **geplante**, noch nicht verfügbare Vorteile markiert. Die Paketstaffelung ist eine erste Produktfestlegung und zentral anpassbar.
+
+Inhaber sehen im Portal die Tarifkarten, den aktuellen Tarif und eine Monatsgebührenvorschau. Eine Tarifanfrage ändert keine Gebühren und löst keine Zahlung aus. Manager/Mitarbeiter können keine Tarifwechsel anfragen. Nach außerhalb der Software geklärter Vereinbarung ordnet die Plattformverwaltung den Tarif zu:
+
+```bash
+php artisan billing:set-plan mein-restaurant starter
+# Alternativen: flex, growth, pro
+```
+
+Teamlimits gelten einschließlich Inhaber; sie werden bei Zugangserteilung geprüft. Ein Wechsel in einen Tarif mit weniger Plätzen als vorhandenen Zuordnungen wird abgewiesen. Bestehende Zuordnungen werden nicht automatisch gelöscht. Tarif-, Speisekarten- und Lieferparameteränderungen werden protokolliert. In Pro sehen berechtigte Inhaber/Manager die letzten 50 Ereignisse ihres Restaurants.
+
+`Plans::forOrder()` berechnet die tarifabhängige Bestellprovision, `Plans::monthlyFee()` die Monatsgebühr einschließlich separat ausgewiesener Umsatzsteuer. Die vorbereiteten Stripe-/PayPal-Requests lassen bei 0 % die Plattformgebühr weg. Künftige Zahlungsaufrufe müssen den Tarifservice verwenden; der niedrigere Commission-Rechner bleibt ein reiner Rechenbaustein.
+
+**Noch keine automatische Abo-Abrechnung:** Die Vorschau nimmt einen vollen Monat an. Rechnungsstellung, Einzug der Monatsgebühren, Vertragslaufzeit, Kündigung, Wechsel zum Periodenbeginn, anteilige Monate und historische Periodenabrechnung sind noch nicht implementiert. `billing:set-plan` ändert die aktuelle Konfiguration unmittelbar; es ist kein rückwirkender Abrechnungsauftrag. Historische Abrechnungen dürfen später nicht aus dem jeweils aktuellen Tarif neu berechnet werden. Bestellcheckout bleibt gesperrt.

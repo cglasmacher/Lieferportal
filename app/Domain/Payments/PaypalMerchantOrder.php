@@ -22,10 +22,10 @@ final class PaypalMerchantOrder
                     'custom_id' => $draft->id,
                     'payee' => ['merchant_id' => $merchantId],
                     'amount' => ['currency_code' => 'EUR', 'value' => PaymentDraft::decimal($draft->totalCents)],
-                    'payment_instruction' => [
+                    ...($draft->platformFeeCents > 0 ? ['payment_instruction' => [
                         'disbursement_mode' => 'INSTANT',
                         'platform_fees' => [['amount' => ['currency_code' => 'EUR', 'value' => PaymentDraft::decimal($draft->platformFeeCents)]]],
-                    ],
+                    ]] : []),
                 ]],
             ],
         ];
