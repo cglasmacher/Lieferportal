@@ -14,7 +14,7 @@ class MonthlyBillingDraft extends Model
 
     protected function casts(): array
     {
-        return ['period_month' => 'date:Y-m-d', 'period_end' => 'date:Y-m-d', 'tariff_snapshot' => 'array', 'recipient_snapshot' => 'array', 'net_cents' => 'integer', 'vat_cents' => 'integer', 'gross_cents' => 'integer'];
+        return ['period_month' => 'date:Y-m-d', 'period_end' => 'date:Y-m-d', 'tariff_snapshot' => 'array', 'recipient_snapshot' => 'array', 'net_cents' => 'integer', 'vat_cents' => 'integer', 'gross_cents' => 'integer', 'referral_discount_cents' => 'integer', 'qualified_referral_count' => 'integer'];
     }
 
     protected static function booted(): void

@@ -148,6 +148,6 @@ class BillingTest extends TestCase
         $this->actingAs($this->owner)->patchJson('/api/v1/merchant/restaurants/demo-kueche', [
             'is_accepting_orders' => true, 'estimated_minutes' => 35, 'minimum_order_cents' => 1500, 'delivery_fee_cents' => 250, 'delivery_postcodes' => ['40721'], 'billing_plan' => 'pro',
         ])->assertOk();
-        $this->assertSame('flex',$this->r->fresh()->billing_plan);
+        $this->assertSame('flex', $this->r->fresh()->billing_plan);
     }
 }

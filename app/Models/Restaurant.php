@@ -9,7 +9,7 @@ class Restaurant extends Model
 {
     protected $guarded = ['id'];
 
-    protected $hidden = ['stripe_account_id', 'paypal_merchant_id'];
+    protected $hidden = ['stripe_account_id', 'paypal_merchant_id', 'referral_company_key', 'referral_code', 'referred_by_restaurant_id'];
 
     protected function casts(): array
     {
