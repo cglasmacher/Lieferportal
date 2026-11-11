@@ -37,6 +37,6 @@ class PaymentSpecificationTest extends TestCase
     public function test_platform_fee_cannot_exceed_payment(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        new PaymentDraft('order-123',100,100);
+        new PaymentDraft('order-123', 100, 100);
     }
 }

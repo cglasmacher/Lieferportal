@@ -127,3 +127,18 @@ Monatsgrenzen richten sich nach Europe/Berlin. Es gilt der volle Kalendermonat, 
 Sobald datierte Bedingungen vorhanden sind, verwendet `Plans::forOrder()` für neue Bestellungen deren aktuell gültigen Provisions- und Steuersatz. Vor dem ersten künftigen Abrechnungsmonat gilt Flex. Ohne datierte Bedingungen bleibt die bisherige Tarifkonfiguration die Berechnungsbasis. So führt eine separate Funktionszuordnung nicht zu einer zusätzlichen Provision während eines vereinbarten Pauschalmonats. Der spätere Bestellkern muss den bei Bestellung berechneten Tarif und Gebührenbetrag ebenfalls speichern; Erstattungen dürfen nicht aus späteren Tarifen neu berechnet werden.
 
 Inhaber sehen im Portal die letzten 12 vereinbarten Tarifstarts und die letzten 24 Monatsentwürfe. Jeder Entwurf lässt sich in einer eigenen, druckbaren HTML-Ansicht öffnen. Fremde Restaurants, Manager und Mitarbeiter haben darauf keinen Zugriff. Die Dokumente sind ausdrücklich **Entwürfe, keine Rechnungen oder Zahlungsaufforderungen**, haben keine Rechnungsnummer und lösen weder Versand noch Zahlung aus. Vollständige rechtliche Rechnungssteller-/Empfängerdaten, finale Rechnungsfreigabe, Korrekturbelege und automatischer Abo-Einzug sind noch nicht implementiert.
+
+## Empfehlungsrabatt im Starter-Tarif
+
+Ein qualifizierter Neukunde reduziert die Nettopauschale um 10 EUR. Maximal zwei Empfehlungen werden angerechnet, mit einer Untergrenze von 29 EUR. Weitere Empfehlungen bleiben sichtbar und können ausscheidende Partner ersetzen. Die Umsatzsteuer wird auf den rabattierten Betrag berechnet. Zahlungen in Starter, Wachstum und Pro können für die Qualifikation zählen.
+
+Die Verwaltung prüft die Unternehmensidentität und benutzt für alle Standorte desselben Unternehmens denselben Schlüssel. Je geprüftem Unternehmen gibt es einen Empfehlungszugang. Bereits vorhandene Unternehmen und Standorte desselben Unternehmens zählen nicht als Neukunden. Der Code wird nur bei der Anlage des Neukunden erfasst. Inhaber sehen ihren eigenen Code und die Anzahl der Empfehlungen im Portal.
+
+```bash
+php artisan referral:enable mein-restaurant FIRMA-001
+php artisan restaurant:create neues-restaurant "Neues Restaurant" --company-key=FIRMA-002 --referral-code=CODE-DES-WERBERS
+php artisan billing:confirm-payment ENTWURFS-ID EXTERNE-ZAHLUNGSREFERENZ 5831
+# Bei Rückzahlung/Rückbuchung: gleicher Befehl mit --reverse.
+```
+
+Zahlungsbestätigungen setzen einen extern abgeglichenen Zahlungseingang zum vollständigen Bruttobetrag des gespeicherten Monatsentwurfs voraus. Die Referenz darf nur einem Entwurf zugeordnet sein. Ein Partner zählt, wenn für mindestens zwei verschiedene Monate bestätigte Zahlungen vorliegen, darunter der abzurechnende Monat. Die Verwaltung bestätigt deshalb zuerst die Zahlungseingänge der geworbenen Partner und erstellt danach den Entwurf des Werbers. Für einen bereits abgelaufenen Monat zählen nur bis Monatsende in Berliner Zeit bestätigte und zu diesem Zeitpunkt gültige Zahlungen. Der Entwurf speichert Rabatt und Anzahl der qualifizierten Partner. Bestätigungen, Rückbuchungen oder Kündigungen ändern bereits gespeicherte Entwürfe nicht. Die Buchung eines Zahlungseingangs zieht kein Geld ein.

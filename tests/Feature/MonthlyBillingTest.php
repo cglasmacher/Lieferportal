@@ -157,9 +157,9 @@ class MonthlyBillingTest extends TestCase
     {
         $this->travelTo(CarbonImmutable::parse('2026-11-30 23:30:00', 'UTC'));
         $this->billing->agree($this->restaurant, 'starter', '2026-12');
-        $this->assertSame(5831, $this->billing->prepare($this->restaurant,'2026-12')->gross_cents);
-        $this->travelTo(CarbonImmutable::parse('2028-02-15 12:00:00','Europe/Berlin'));
-        $this->billing->agree($this->restaurant,'pro','2028-02');
-        $this->assertSame('2028-02-29',$this->billing->prepare($this->restaurant,'2028-02')->period_end->format('Y-m-d'));
+        $this->assertSame(5831, $this->billing->prepare($this->restaurant, '2026-12')->gross_cents);
+        $this->travelTo(CarbonImmutable::parse('2028-02-15 12:00:00', 'Europe/Berlin'));
+        $this->billing->agree($this->restaurant, 'pro', '2028-02');
+        $this->assertSame('2028-02-29', $this->billing->prepare($this->restaurant, '2028-02')->period_end->format('Y-m-d'));
     }
 }

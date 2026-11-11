@@ -72,13 +72,18 @@ final class MonthlyBilling
             if ($term->commission_basis_points !== 0 || $term->monthly_net_cents <= 0) {
                 throw new DomainException('Flex-Provisionen benötigen Bestelldaten; es wird keine fiktive Nullabrechnung erstellt.');
             }
-            $vat = intdiv($term->monthly_net_cents * $term->vat_basis_points + 5000, 10000);
+            $referrals = app(Referrals::class);
+            $qualified = $term->plan_key === 'starter' ? $referrals->qualifiedCount($locked, $start) : 0;
+            $discount = $referrals->discount($term->plan_key, $term->monthly_net_cents, $qualified);
+            $net = $term->monthly_net_cents - $discount;
+            $vat = intdiv($net * $term->vat_basis_points + 5000, 10000);
             $draft = MonthlyBillingDraft::create([
                 'restaurant_id' => $locked->id, 'restaurant_billing_term_id' => $term->id,
                 'period_month' => $start->toDateString(), 'period_end' => $start->endOfMonth()->toDateString(), 'currency' => 'EUR',
                 'tariff_snapshot' => $term->only(['plan_key', 'plan_name', 'monthly_net_cents', 'vat_basis_points', 'commission_basis_points']),
                 'recipient_snapshot' => $locked->only(['name', 'address', 'city']),
-                'net_cents' => $term->monthly_net_cents, 'vat_cents' => $vat, 'gross_cents' => $term->monthly_net_cents + $vat,
+                'net_cents' => $net, 'vat_cents' => $vat, 'gross_cents' => $net + $vat,
+                'referral_discount_cents' => $discount, 'qualified_referral_count' => $qualified,
             ]);
             RestaurantActivity::create(['restaurant_id' => $locked->id, 'action' => 'billing.draft_prepared', 'metadata' => ['draft_id' => $draft->id, 'month' => $start->format('Y-m')]]);
 
